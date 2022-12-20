@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"errors"
 	"log"
 	"net"
 
@@ -28,9 +29,13 @@ func main() {
 
 		log.Println(numBytes, clientAddress, hex.EncodeToString(truncatedRawRequest))
 
-		request, _ := parseRawRequest(truncatedRawRequest)
+		request, err := parseRawRequest(truncatedRawRequest)
+		if err != nil {
+			log.Println(err)
+			break
+		}
 
-		log.Println(request)
+		log.Printf("request: %+v\n", request)
 
 		connection.WriteTo(truncatedRawRequest, clientAddress)
 	}
@@ -38,6 +43,11 @@ func main() {
 
 func parseRawRequest(rawRequest []byte) (header.Header, error) {
 	request := header.Header{}
+
+	if len(rawRequest) < 12 {
+		return request, errors.New("header length must be at least 12 bytes")
+	}
+
 	// transaction ID  (2 bytes)
 	request.TransactionID = [2]byte{rawRequest[0], rawRequest[1]}
 
@@ -49,9 +59,12 @@ func parseRawRequest(rawRequest []byte) (header.Header, error) {
 	request.Opcode = header.Opcode(
 		(0b01111000 & flags[0]) >> 3,
 	)
-	request.Truncation = (0b00000010 & flags[0]) == 1
+	request.Truncation = ((0b00000010 & flags[0]) >> 1) == 1
 	request.RecursionDesired = (0b00000001 & flags[0]) == 1
-	request.Z = int((0b01110000 & flags[1]) >> 4)
+	request.RecursionAvailable = ((0b10000000 & flags[1]) >> 7) == 1
+	request.Reserved = int((0b01000000 & flags[1]) >> 6)
+	request.AuthenticData = ((0b00100000 & flags[1]) >> 5) == 1
+	request.CheckingDisabled = ((0b00010000 & flags[1]) >> 4) == 1
 	request.ResponseCode = header.ResponseCode(
 		(0b00001111 & flags[1]),
 	)
