@@ -41,14 +41,32 @@ func parseRawRequest(rawRequest []byte) (header.Header, error) {
 	// transaction ID  (2 bytes)
 	request.TransactionID = [2]byte{rawRequest[0], rawRequest[1]}
 
+	// 2 bytes of flags
 	flags := [2]byte{rawRequest[2], rawRequest[3]}
-
 	request.QueryType = header.QueryType(
 		(0b10000000 & flags[0]) >> 7,
 	)
 	request.Opcode = header.Opcode(
 		(0b01111000 & flags[0]) >> 3,
 	)
+	request.Truncation = (0b00000010 & flags[0]) == 1
+	request.RecursionDesired = (0b00000001 & flags[0]) == 1
+	request.Z = int((0b01110000 & flags[1]) >> 4)
+	request.ResponseCode = header.ResponseCode(
+		(0b00001111 & flags[1]),
+	)
+
+	// 2 bytes of QDCOUNT
+	request.QuestionCount = int(rawRequest[4])<<8 + int(rawRequest[5])
+
+	// 2 bytes of ANCOUNT
+	request.AnswerCount = int(rawRequest[6])<<8 + int(rawRequest[7])
+
+	// 2 bytes of NSCOUNT
+	request.NameServerCount = int(rawRequest[8])<<8 + int(rawRequest[9])
+
+	// 2 bytes of ARCOUNT
+	request.AdditionalRecordsCount = int(rawRequest[10])<<8 + int(rawRequest[11])
 
 	return request, nil
 }
