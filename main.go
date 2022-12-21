@@ -7,7 +7,9 @@ import (
 	"log"
 	"net"
 
-	"github.com/rianhasiando/go-dns-server/constants/header"
+	"github.com/rianhasiando/go-dns-server/definition/payload"
+	"github.com/rianhasiando/go-dns-server/definition/payload/header"
+	"github.com/rianhasiando/go-dns-server/definition/payload/query"
 )
 
 func main() {
@@ -42,51 +44,52 @@ func main() {
 	}
 }
 
-func parseRawRequest(rawRequest []byte) (header.Header, error) {
-	request := header.Header{}
+func parseRawRequest(rawRequest []byte) (payload.Payload, error) {
+	request := payload.Payload{}
 
 	if len(rawRequest) < 12 {
 		return request, errors.New("header length must be at least 12 bytes")
 	}
 
 	// transaction ID  (2 bytes)
-	request.TransactionID = [2]byte{rawRequest[0], rawRequest[1]}
+	request.Header.TransactionID = [2]byte{rawRequest[0], rawRequest[1]}
 
 	// 2 bytes of flags
 	flags := [2]byte{rawRequest[2], rawRequest[3]}
-	request.QueryType = header.QueryType(
+	request.Header.QueryType = header.QueryType(
 		(0b10000000 & flags[0]) >> 7,
 	)
-	request.Opcode = header.Opcode(
+	request.Header.Opcode = header.Opcode(
 		(0b01111000 & flags[0]) >> 3,
 	)
-	request.Truncation = ((0b00000010 & flags[0]) >> 1) == 1
-	request.RecursionDesired = (0b00000001 & flags[0]) == 1
-	request.RecursionAvailable = ((0b10000000 & flags[1]) >> 7) == 1
-	request.Reserved = int((0b01000000 & flags[1]) >> 6)
-	request.AuthenticData = ((0b00100000 & flags[1]) >> 5) == 1
-	request.CheckingDisabled = ((0b00010000 & flags[1]) >> 4) == 1
-	request.ResponseCode = header.ResponseCode(
+	request.Header.Truncation = ((0b00000010 & flags[0]) >> 1) == 1
+	request.Header.RecursionDesired = (0b00000001 & flags[0]) == 1
+	request.Header.RecursionAvailable = ((0b10000000 & flags[1]) >> 7) == 1
+	request.Header.Reserved = int((0b01000000 & flags[1]) >> 6)
+	request.Header.AuthenticData = ((0b00100000 & flags[1]) >> 5) == 1
+	request.Header.CheckingDisabled = ((0b00010000 & flags[1]) >> 4) == 1
+	request.Header.ResponseCode = header.ResponseCode(
 		(0b00001111 & flags[1]),
 	)
 
 	// 2 bytes of QDCOUNT
-	request.QuestionCount = int(rawRequest[4])<<8 + int(rawRequest[5])
+	request.Header.QuestionCount = int(rawRequest[4])<<8 + int(rawRequest[5])
 
 	// 2 bytes of ANCOUNT
-	request.AnswerCount = int(rawRequest[6])<<8 + int(rawRequest[7])
+	request.Header.AnswerCount = int(rawRequest[6])<<8 + int(rawRequest[7])
 
 	// 2 bytes of NSCOUNT
-	request.NameServerCount = int(rawRequest[8])<<8 + int(rawRequest[9])
+	request.Header.NameServerCount = int(rawRequest[8])<<8 + int(rawRequest[9])
 
 	// 2 bytes of ARCOUNT
-	request.AdditionalRecordsCount = int(rawRequest[10])<<8 + int(rawRequest[11])
+	request.Header.AdditionalRecordsCount = int(rawRequest[10])<<8 + int(rawRequest[11])
 
+	currentPointerIdx := 12
 	// parsing the queries
 	// typically one request only have 1 question
 	// so we need to only process one query (if given)
-	if request.QuestionCount == 1 && len(rawRequest) >= 13 {
-		currentPointerIdx := 12
+	if request.Header.QuestionCount == 1 && len(rawRequest) >= currentPointerIdx+1 {
+
 		numCharDomain := uint(rawRequest[currentPointerIdx])
 
 		if len(rawRequest) >= currentPointerIdx+int(numCharDomain)+1 {
@@ -121,7 +124,7 @@ func parseRawRequest(rawRequest []byte) (header.Header, error) {
 			t := int(rawRequest[currentPointerIdx]) << 8
 			currentPointerIdx += 1
 			t += int(rawRequest[currentPointerIdx])
-			request.Query.QType = header.QType(t)
+			request.Query.QType = query.QType(t)
 		}
 
 		currentPointerIdx += 1
@@ -130,9 +133,11 @@ func parseRawRequest(rawRequest []byte) (header.Header, error) {
 			c := int(rawRequest[currentPointerIdx]) << 8
 			currentPointerIdx += 1
 			c += int(rawRequest[currentPointerIdx])
-			request.Query.QClass = header.QClass(c)
+			request.Query.QClass = query.QClass(c)
 		}
 	}
+
+	// here we don't parse additional request for simplicity
 
 	return request, nil
 }

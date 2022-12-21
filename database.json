@@ -1,0 +1,35 @@
+{
+    "list_zones": {
+        "rianhasiando.space.": {
+            "IN": {
+                "A": [
+                    {
+                        "name": "@",
+                        "ttl": 400,
+                        "value": "1.2.3.4"
+                    },
+                    {
+                        "name": "@",
+                        "ttl": 500,
+                        "value": "5.6.7.8"
+                    },
+                    {
+                        "name": "@",
+                        "ttl": 600,
+                        "value": "9.10.11.12"
+                    }
+                ],
+                "NS": [
+                    {
+                        "ttl": 700,
+                        "value": "ns001.rianhasiando.space"
+                    },
+                    {
+                        "ttl": 800,
+                        "value": "ns002.rianhasiando.space"
+                    }   
+                ]
+            }
+        }
+    }
+}

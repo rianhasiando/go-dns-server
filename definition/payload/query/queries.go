@@ -1,4 +1,4 @@
-package header
+package query
 
 type Query struct {
 	TLD    string // Top Level Domain
