@@ -1,6 +1,8 @@
 package lookup
 
 type DNSDatabase struct {
+	// map[domain name]map[class]data
+	// ex. map[rianhasiando.space.]map[IN]data
 	ListZones map[string]map[string]DNSClassData `json:"list_zones"`
 }
 

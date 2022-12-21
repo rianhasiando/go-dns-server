@@ -6,11 +6,15 @@ import (
 
 	"github.com/rianhasiando/go-dns-server/payload/header"
 	"github.com/rianhasiando/go-dns-server/payload/query"
+	"github.com/rianhasiando/go-dns-server/payload/rr"
 )
 
 type Payload struct {
 	Header header.Header
 	Query  query.Query
+
+	// the answer
+	ResourceRecords []rr.ResourceRecord
 }
 
 func ParseRawRequest(rawRequest []byte) (Payload, error) {
@@ -53,12 +57,14 @@ func ParseRawRequest(rawRequest []byte) (Payload, error) {
 	// 2 bytes of ARCOUNT
 	request.Header.AdditionalRecordsCount = int(rawRequest[10])<<8 + int(rawRequest[11])
 
+	// the start index of queries is 12 (zero-based)
 	currentPointerIdx := 12
 	// parsing the queries
 	// typically one request only have 1 question
 	// so we need to only process one query (if given)
 	if request.Header.QuestionCount == 1 && len(rawRequest) >= currentPointerIdx+1 {
 
+		request.Query.FirstByteIdx = currentPointerIdx
 		numCharDomain := uint(rawRequest[currentPointerIdx])
 
 		if len(rawRequest) >= currentPointerIdx+int(numCharDomain)+1 {
@@ -79,7 +85,7 @@ func ParseRawRequest(rawRequest []byte) (Payload, error) {
 			}
 		}
 
-		request.Query.QName = fmt.Sprintf("%s.%s",
+		request.Query.QName = fmt.Sprintf("%s.%s.",
 			request.Query.Domain,
 			request.Query.TLD,
 		)
