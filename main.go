@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 
@@ -80,6 +81,58 @@ func parseRawRequest(rawRequest []byte) (header.Header, error) {
 
 	// 2 bytes of ARCOUNT
 	request.AdditionalRecordsCount = int(rawRequest[10])<<8 + int(rawRequest[11])
+
+	// parsing the queries
+	// typically one request only have 1 question
+	// so we need to only process one query (if given)
+	if request.QuestionCount == 1 && len(rawRequest) >= 13 {
+		currentPointerIdx := 12
+		numCharDomain := uint(rawRequest[currentPointerIdx])
+
+		if len(rawRequest) >= currentPointerIdx+int(numCharDomain)+1 {
+			currentPointerIdx += 1
+			request.Query.Domain = string(rawRequest[currentPointerIdx : currentPointerIdx+int(numCharDomain)])
+			currentPointerIdx += int(numCharDomain - 1)
+		}
+
+		numCharTLD := uint(0)
+		currentPointerIdx += 1
+		if len(rawRequest) >= currentPointerIdx+1 {
+			numCharTLD = uint(rawRequest[currentPointerIdx])
+
+			currentPointerIdx += 1
+			if len(rawRequest) >= currentPointerIdx+int(numCharTLD)+1 {
+				request.Query.TLD = string(rawRequest[currentPointerIdx : currentPointerIdx+int(numCharTLD)])
+				currentPointerIdx += int(numCharTLD - 1)
+			}
+		}
+
+		request.Query.QName = fmt.Sprintf("%s.%s",
+			request.Query.Domain,
+			request.Query.TLD,
+		)
+
+		// after the domain specs, the next byte is 0x00 (null character)
+		// we just skip this null character because it's not needed anyway
+		currentPointerIdx += 2
+
+		// make sure we have 2 bytes more for qtype
+		if len(rawRequest) >= currentPointerIdx+2 {
+			t := int(rawRequest[currentPointerIdx]) << 8
+			currentPointerIdx += 1
+			t += int(rawRequest[currentPointerIdx])
+			request.Query.QType = header.QType(t)
+		}
+
+		currentPointerIdx += 1
+		// make sure we have 2 bytes more for qclass
+		if len(rawRequest) >= currentPointerIdx+2 {
+			c := int(rawRequest[currentPointerIdx]) << 8
+			currentPointerIdx += 1
+			c += int(rawRequest[currentPointerIdx])
+			request.Query.QClass = header.QClass(c)
+		}
+	}
 
 	return request, nil
 }

@@ -18,4 +18,6 @@ type Header struct {
 	AnswerCount            int
 	NameServerCount        int
 	AdditionalRecordsCount int
+
+	Query Query
 }
