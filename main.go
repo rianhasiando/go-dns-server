@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/rianhasiando/go-dns-server/lookup"
 	"github.com/rianhasiando/go-dns-server/payload"
 )
 
@@ -35,6 +36,12 @@ func main() {
 		}
 
 		log.Printf("request: %+v\n", request)
+
+		err = lookup.LookupRecord(&request)
+		if err != nil {
+			log.Println(err)
+			break
+		}
 
 		connection.WriteTo(truncatedRawRequest, clientAddress)
 	}
