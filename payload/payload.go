@@ -116,3 +116,9 @@ func ParseRawRequest(rawRequest []byte) (Payload, error) {
 
 	return request, nil
 }
+
+func GenerateResponse(p Payload) []byte {
+	rawResponse := []byte{}
+
+	return rawResponse
+}

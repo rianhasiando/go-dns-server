@@ -37,10 +37,9 @@ func main() {
 
 		log.Printf("request: %+v\n", request)
 
-		err = lookup.LookupRecord(&request)
-		if err != nil {
+		errLookup := lookup.LookupRecord(&request)
+		if errLookup != nil {
 			log.Println(err)
-			break
 		}
 
 		connection.WriteTo(truncatedRawRequest, clientAddress)

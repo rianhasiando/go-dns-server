@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/rianhasiando/go-dns-server/payload"
+	e "github.com/rianhasiando/go-dns-server/payload/error"
 	q "github.com/rianhasiando/go-dns-server/payload/query"
 	"github.com/rianhasiando/go-dns-server/payload/rr"
 )
@@ -12,17 +13,16 @@ import (
 func LookupRecord(p *payload.Payload) error {
 	var (
 		database DNSDatabase
-		err      error
 	)
 
 	jsonBytes, err := os.ReadFile("database.json")
 	if err != nil {
-		return err
+		return e.ErrDB
 	}
 
 	err = json.Unmarshal(jsonBytes, &database)
 	if err != nil {
-		return err
+		return e.ErrDB
 	}
 
 	classData := DNSClassData{}
